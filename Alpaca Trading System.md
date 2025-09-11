@@ -279,10 +279,3 @@ This project is provided as-is for educational purposes. Use at your own risk.
 ---
 
 **Remember**: Successful trading requires discipline, risk management, and continuous learning. Start conservative, test thoroughly, and never risk more than you can afford to lose.
-
-## Example Heading
-
-This is an example of additional content that could be added to the document. It serves no functional purpose other than to demonstrate the ability to add more sections.
-
-- List item 1
-- List item 2
