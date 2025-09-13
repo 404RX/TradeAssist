@@ -29,11 +29,11 @@ Examples:
 
 **Output Format Standards**: Every agent output file must start with:
 ```markdown
-# {Agent Role} Report
-**Date**: {YYYY-MM-DD HH:MM:SS}
-**Session ID**: {Unique identifier}
-**Files Analyzed**: {List of files reviewed}
-**Agent Version**: {Agent role version}
+# {Agent Role} Report (New line)
+**Date**: {YYYY-MM-DD HH:MM:SS} (New line)
+**Session ID**: {Unique identifier} (New line)
+**Files Analyzed**: {List of files reviewed} (New line)
+**Agent Version**: {Agent role version} (New line)
 
 ---
 ```

@@ -5,6 +5,7 @@ Advanced trading bot with multiple strategies and risk management
 
 from alpaca_trading_client import *
 from alpaca_config import get_client
+from equity_tracker import load_today_start_equity, save_today_start_equity
 from trading_strategies_config import *
 import pandas as pd
 import numpy as np
@@ -30,6 +31,7 @@ class AdvancedTradingBot:
                  risk_level: str = "moderate"):
         
         self.client = get_client(mode)
+        self.mode = mode
         self.strategy = strategy
         self.risk_level = risk_level
         
@@ -468,11 +470,17 @@ class AdvancedTradingBot:
         if self.last_trade_date != today:
             self.daily_trades = 0
             self.last_trade_date = today
-            try:
-                acct = self.client.get_account()
-                self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
-            except Exception:
-                self.start_of_day_equity = None
+            # Try persisted equity first
+            persisted = load_today_start_equity(self.mode)
+            if persisted is not None:
+                self.start_of_day_equity = float(persisted)
+            else:
+                try:
+                    acct = self.client.get_account()
+                    self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+                    save_today_start_equity(self.mode, self.start_of_day_equity)
+                except Exception:
+                    self.start_of_day_equity = None
 
         # Daily loss circuit breaker
         try:

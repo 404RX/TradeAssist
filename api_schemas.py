@@ -227,8 +227,12 @@ class _ModelAccessor:
     def __repr__(self) -> str:
         return f"ModelAccessor({self._model.__class__.__name__}): {self._model!r}"
 
+    def unwrap(self) -> BaseModel:
+        """Return the underlying Pydantic model instance."""
+        return self._model
 
-def validate_pydantic_model(model_class: BaseModel, data: Dict[str, Any]) -> BaseModel:
+
+def validate_pydantic_model(model_class: BaseModel, data: Dict[str, Any]) -> _ModelAccessor:
     """
     Validate data against a Pydantic model
     
@@ -237,15 +241,14 @@ def validate_pydantic_model(model_class: BaseModel, data: Dict[str, Any]) -> Bas
         data: Data dictionary to validate
         
     Returns:
-        Validated Pydantic model instance
+        Validated model wrapped in _ModelAccessor for attribute and item access
         
     Raises:
         SchemaValidationError: If validation fails
     """
     try:
         model = model_class(**data)
-        # Return wrapper to support both obj.attr and obj['attr'] access styles
-        return _ModelAccessor(model)
+        return _ModelAccessor(model)  # supports both obj.attr and obj['attr'] access styles
     except ValidationError as e:
         error_msg = f"Pydantic validation failed for {model_class.__name__}: {str(e)}"
         logger.error(error_msg)
@@ -295,7 +298,7 @@ def validate_field(data: Dict, field: str, expected_type: type, required: bool =
     
     return value
 
-def validate_account_schema(data: Dict[str, Any]) -> AccountModel:
+def validate_account_schema(data: Dict[str, Any]) -> _ModelAccessor:
     """Validate account API response schema using Pydantic model.
 
     Provides a clearer error message for missing required identifier field
@@ -305,35 +308,33 @@ def validate_account_schema(data: Dict[str, Any]) -> AccountModel:
         raise SchemaValidationError("Required field 'id' missing from API response")
     return validate_pydantic_model(AccountModel, data)
 
-def validate_position_schema(data: Dict[str, Any]) -> PositionModel:
+def validate_position_schema(data: Dict[str, Any]) -> _ModelAccessor:
     """Validate position API response schema using Pydantic model"""
     return validate_pydantic_model(PositionModel, data)
 
-def validate_order_schema(data: Dict[str, Any]) -> OrderModel:
+def validate_order_schema(data: Dict[str, Any]) -> _ModelAccessor:
     """Validate order API response schema using Pydantic model"""
     return validate_pydantic_model(OrderModel, data)
 
-def validate_bar_schema(data: Dict[str, Any]) -> BarModel:
+def validate_bar_schema(data: Dict[str, Any]) -> _ModelAccessor:
     """Validate bar (price) data schema using Pydantic model"""
     return validate_pydantic_model(BarModel, data)
 
-def validate_bars_response(data: Dict[str, Any]) -> BarsResponseModel:
+def validate_bars_response(data: Dict[str, Any]) -> _ModelAccessor:
     """Validate bars API response schema using Pydantic model"""
-    # Pre-process bars data to convert to BarModel instances
+    # Pre-process bars: ensure lists of dicts and build BarModel instances (not wrapped)
     if 'bars' in data:
-        validated_bars = {}
+        validated_bars: Dict[str, List[BarModel]] = {}
         for symbol, bars in data['bars'].items():
             if not isinstance(bars, list):
                 raise SchemaValidationError(f"Bars for symbol '{symbol}' must be a list")
-            
-            validated_symbol_bars = []
+            validated_symbol_bars: List[BarModel] = []
             for bar in bars:
                 if not isinstance(bar, dict):
-                    raise SchemaValidationError(f"Each bar must be a dictionary")
-                validated_symbol_bars.append(validate_bar_schema(bar))
-            
+                    raise SchemaValidationError("Each bar must be a dictionary")
+                # Create actual BarModel so nested validation in BarsResponseModel works
+                validated_symbol_bars.append(BarModel(**bar))
             validated_bars[symbol] = validated_symbol_bars
-        
         data['bars'] = validated_bars
     
     return validate_pydantic_model(BarsResponseModel, data)
@@ -384,12 +385,12 @@ def model_to_dict(model: BaseModel, exclude_none: bool = True) -> Dict[str, Any]
         return model.dict(exclude_none=True)
     return model.dict()
 
-def validate_positions_list(data: List[Dict[str, Any]]) -> List[PositionModel]:
+def validate_positions_list(data: List[Dict[str, Any]]) -> List[_ModelAccessor]:
     """Validate a list of positions using Pydantic models"""
     if not isinstance(data, list):
         raise SchemaValidationError("Positions response must be a list")
     
-    validated_positions = []
+    validated_positions: List[_ModelAccessor] = []
     for i, position in enumerate(data):
         try:
             validated_positions.append(validate_position_schema(position))
@@ -399,12 +400,12 @@ def validate_positions_list(data: List[Dict[str, Any]]) -> List[PositionModel]:
     
     return validated_positions
 
-def validate_orders_list(data: List[Dict[str, Any]]) -> List[OrderModel]:
+def validate_orders_list(data: List[Dict[str, Any]]) -> List[_ModelAccessor]:
     """Validate a list of orders using Pydantic models"""
     if not isinstance(data, list):
         raise SchemaValidationError("Orders response must be a list")
     
-    validated_orders = []
+    validated_orders: List[_ModelAccessor] = []
     for i, order in enumerate(data):
         try:
             validated_orders.append(validate_order_schema(order))
@@ -433,7 +434,7 @@ MODEL_REGISTRY = {
     'bars_response': BarsResponseModel,
 }
 
-def validate_api_response(endpoint: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[BaseModel, List[BaseModel]]:
+def validate_api_response(endpoint: str, data: Union[Dict[str, Any], List[Dict[str, Any]]]) -> Union[_ModelAccessor, List[_ModelAccessor]]:
     """
     Validate API response against appropriate Pydantic schema
     
@@ -486,7 +487,7 @@ def validate_api_response(endpoint: str, data: Union[Dict[str, Any], List[Dict[s
         logger.error(f"Validation error for endpoint {endpoint}: {str(e)}")
         raise SchemaValidationError(f"API response validation failed for {endpoint}: {str(e)}")
 
-def safe_validate(model_class: BaseModel, data: Dict[str, Any], fallback_value=None) -> Union[BaseModel, Any]:
+def safe_validate(model_class: BaseModel, data: Dict[str, Any], fallback_value=None) -> Union[_ModelAccessor, Any]:
     """
     Safely validate data against a Pydantic model with fallback
     
@@ -515,7 +516,7 @@ def validate_with_error_collection(data_list: List[Dict[str, Any]], model_class:
     Returns:
         Tuple of (validated_items, errors)
     """
-    validated_items = []
+    validated_items: List[_ModelAccessor] = []
     errors = []
     
     for i, item in enumerate(data_list):

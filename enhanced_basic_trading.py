@@ -8,6 +8,7 @@ from alpaca_trading_client import (
     OrderType, TimeInForce, create_paper_client
 )
 from alpaca_config import get_client, MAX_POSITION_SIZE
+from equity_tracker import load_today_start_equity, save_today_start_equity
 import time
 import datetime
 from typing import Dict, List, Optional
@@ -22,6 +23,7 @@ class EnhancedBasicTrader:
     
     def __init__(self, mode: TradingMode = TradingMode.PAPER):
         self.client = get_client(mode)
+        self.mode = mode
         self.watchlist = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA", "SPY", "QQQ"]
         self.max_position_pct = 0.1  # 10% max per position
         self.stop_loss_pct = 0.05   # 5% stop loss
@@ -30,6 +32,7 @@ class EnhancedBasicTrader:
         self.max_open_positions = 8
         self.max_daily_loss_pct = 0.03
         self.start_of_day_equity: Optional[float] = None
+        self.last_equity_date = None
         
     def get_account_summary(self) -> Dict:
         """Get detailed account summary"""
@@ -314,14 +317,20 @@ class EnhancedBasicTrader:
             logger.info("Market is closed")
             return
         
-        # Reset start of day equity when day changes
+        # Reset/set start of day equity when day changes, with persistence
         today = datetime.datetime.now().date()
-        if self.start_of_day_equity is None:
-            try:
-                acct = self.client.get_account()
-                self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
-            except Exception:
-                self.start_of_day_equity = None
+        if self.last_equity_date != today:
+            persisted = load_today_start_equity(self.mode)
+            if persisted is not None:
+                self.start_of_day_equity = float(persisted)
+            else:
+                try:
+                    acct = self.client.get_account()
+                    self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+                    save_today_start_equity(self.mode, self.start_of_day_equity)
+                except Exception:
+                    self.start_of_day_equity = None
+            self.last_equity_date = today
 
         # Daily loss circuit breaker
         try:
