@@ -11,19 +11,23 @@ from alpaca_trading_client import AlpacaCredentials, TradingMode, create_paper_c
 
 # Load variables from .env file
 load_dotenv()
-MODE = os.getenv("MODE")
-# =============================================================================
-# API CREDENTIALS
-# =============================================================================
 
-if MODE == "PAPER":
-    # Paper Trading Credentials
-    PAPER_API_KEY_ID = os.getenv("ALPACA_PAPER_API_KEY")
-    PAPER_SECRET_KEY = os.getenv("ALPACA_PAPER_SECRET")
-elif MODE == "LIVE":
-    # Live Trading Credentials
-    LIVE_API_KEY_ID = os.getenv("ALPACA_LIVE_API_KEY")
-    LIVE_SECRET_KEY = os.getenv("ALPACA_LIVE_SECRET")
+# Effective mode helper always defaults to PAPER for safety
+def get_effective_mode() -> TradingMode:
+    """Return effective trading mode based on environment.
+
+    Defaults to paper trading when MODE is unset or unrecognized.
+    """
+    mode_env = os.getenv("MODE", "PAPER").strip().upper()
+    if mode_env in ("PAPER", TradingMode.PAPER.value.upper()):
+        return TradingMode.PAPER
+    if mode_env in ("LIVE", TradingMode.LIVE.value.upper()):
+        return TradingMode.LIVE
+    # Fallback to PAPER for safety
+    return TradingMode.PAPER
+# =============================================================================
+# API CREDENTIALS (loaded on demand in get_client)
+# =============================================================================
 
 # =============================================================================
 # TRADING SETTINGS
@@ -54,39 +58,44 @@ def get_client(mode: TradingMode = None):
     Args:
         mode: Trading mode (defaults to DEFAULT_MODE)
     """
+    # Always reload environment to pick up .env changes
+    load_dotenv()
+
     if mode is None:
-        mode = DEFAULT_MODE
-    
+        mode = get_effective_mode()
+
     if mode == TradingMode.PAPER:
-        return create_paper_client(PAPER_API_KEY_ID, PAPER_SECRET_KEY)
+        paper_api_key = os.getenv("ALPACA_PAPER_API_KEY")
+        paper_secret = os.getenv("ALPACA_PAPER_SECRET")
+        return create_paper_client(paper_api_key, paper_secret)
     elif mode == TradingMode.LIVE:
-        return create_live_client(LIVE_API_KEY_ID, LIVE_SECRET_KEY)
+        live_api_key = os.getenv("ALPACA_LIVE_API_KEY")
+        live_secret = os.getenv("ALPACA_LIVE_SECRET")
+        return create_live_client(live_api_key, live_secret)
     else:
         raise ValueError(f"Invalid trading mode: {mode}")
 
-def validate_credentials():
-    """Validate that all required credentials are set"""
+def validate_credentials() -> bool:
+    """Validate that all required credentials are set for the active mode.
 
+    Reads environment variables directly and raises ValueError if any required
+    variable is missing. Defaults to PAPER mode when MODE is unset.
+    """
     load_dotenv()
-    MODE = os.getenv("MODE")
-    missing = []
+    mode = get_effective_mode()
 
-    if MODE == "PAPER":
-        required = ["PAPER_API_KEY_ID", "PAPER_SECRET_KEY"]
-        missing.append("PAPER_API_KEY_ID")
-        missing.append("PAPER_SECRET_KEY")
-        return True
-    elif MODE == "LIVE":
-        required = ["LIVE_API_KEY_ID", "LIVE_SECRET_KEY"]
-        missing.append("LIVE_API_KEY_ID")
-        missing.append("LIVE_SECRET_KEY")
-        return True
+    if mode == TradingMode.PAPER:
+        required_vars = ["ALPACA_PAPER_API_KEY", "ALPACA_PAPER_SECRET"]
+    elif mode == TradingMode.LIVE:
+        required_vars = ["ALPACA_LIVE_API_KEY", "ALPACA_LIVE_SECRET"]
     else:
-        raise ValueError(f"Invalid trading mode: {MODE}")
-    
+        # Should not happen, but be defensive
+        required_vars = ["ALPACA_PAPER_API_KEY", "ALPACA_PAPER_SECRET"]
+
+    missing = [var for var in required_vars if not os.getenv(var)]
     if missing:
         raise ValueError(f"Missing credentials: {', '.join(missing)}")
-    
+
     return True
 
 # =============================================================================

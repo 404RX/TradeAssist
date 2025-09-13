@@ -240,7 +240,10 @@ class AlpacaTradingClient:
                    side: OrderSide = OrderSide.BUY, order_type: OrderType = OrderType.MARKET,
                    time_in_force: TimeInForce = TimeInForce.DAY, limit_price: Optional[str] = None,
                    stop_price: Optional[str] = None, trail_price: Optional[str] = None,
-                   trail_percent: Optional[str] = None) -> Dict[str, Any]:
+                   trail_percent: Optional[str] = None,
+                   order_class: Optional[str] = None,
+                   take_profit: Optional[Dict[str, Any]] = None,
+                   stop_loss: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Place a trading order
         
@@ -278,6 +281,12 @@ class AlpacaTradingClient:
             data["trail_price"] = trail_price
         if trail_percent:
             data["trail_percent"] = trail_percent
+        if order_class:
+            data["order_class"] = order_class
+        if take_profit:
+            data["take_profit"] = take_profit
+        if stop_loss:
+            data["stop_loss"] = stop_loss
         
         return self._make_request("v2/orders", method="POST", data=data)
     
@@ -389,6 +398,41 @@ class AlpacaTradingClient:
         """Place limit sell order"""
         return self.place_order(symbol, qty=qty, side=OrderSide.SELL, 
                               order_type=OrderType.LIMIT, limit_price=limit_price)
+
+    def place_bracket_order(self, symbol: str, qty: str, side: OrderSide = OrderSide.BUY,
+                            time_in_force: TimeInForce = TimeInForce.DAY,
+                            entry_type: OrderType = OrderType.MARKET,
+                            take_profit_limit_price: Optional[str] = None,
+                            stop_loss_stop_price: Optional[str] = None,
+                            stop_loss_limit_price: Optional[str] = None) -> Dict[str, Any]:
+        """Convenience method to place a bracket order (OCO) with attached TP/SL.
+
+        Args:
+            symbol: Symbol to trade
+            qty: Quantity of shares
+            side: BUY or SELL
+            time_in_force: Time in force
+            entry_type: MARKET or LIMIT for the parent order
+            take_profit_limit_price: Limit price for take profit child order
+            stop_loss_stop_price: Stop price for stop loss child order
+            stop_loss_limit_price: Optional limit price for stop-limit child order
+        """
+        tp = {"limit_price": take_profit_limit_price} if take_profit_limit_price else None
+        sl = None
+        if stop_loss_stop_price:
+            sl = {"stop_price": stop_loss_stop_price}
+            if stop_loss_limit_price:
+                sl["limit_price"] = stop_loss_limit_price
+        return self.place_order(
+            symbol=symbol,
+            qty=qty,
+            side=side,
+            order_type=entry_type,
+            time_in_force=time_in_force,
+            order_class="bracket",
+            take_profit=tp,
+            stop_loss=sl
+        )
 
 
 # Example usage and configuration

@@ -1,0 +1,16 @@
+2025-09-10 21:52:50 - INFO - MOMENTUM_SIGNAL|AAPL|Price Change: +3.2%|Volume: 1.5x|Action: BUY
+2025-09-10 21:57:44 - INFO - SPY|Action: SKIP|Buy Signals: 0|Warning Signals: 0|Price: $652.21|Trend: Neutral|Volume: Normal
+2025-09-10 21:57:45 - INFO - QQQ|Action: SKIP|Buy Signals: 0|Warning Signals: 0|Price: $580.70|Trend: Neutral|Volume: Normal
+2025-09-10 22:27:05 - INFO - SPY|Action: SKIP|Buy Signals: 0|Warning Signals: 0|Price: $652.21|Trend: Neutral|Volume: Normal
+2025-09-10 23:02:13 - INFO - MOMENTUM_SIGNAL|AAPL|Price Change: +3.2%|Volume: 1.5x|Action: BUY
+2025-09-11 11:19:48 - INFO - JPM|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $304.02
+2025-09-11 11:19:50 - INFO - PG|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $157.78
+2025-09-11 11:19:51 - INFO - BRK.B|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $494.40
+2025-09-11 11:19:51 - INFO - KO|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $68.07
+2025-09-11 11:19:52 - INFO - PEP|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $144.73
+2025-09-11 11:19:54 - INFO - JNJ|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $177.62
+2025-09-11 11:19:54 - INFO - WMT|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $102.30
+2025-09-11 11:20:06 - INFO - SPY|Strategy: momentum|Action: CONSIDER|Signals: 1|Warnings: 0|Price: $657.47
+2025-09-11 11:20:07 - INFO - SPY|Strategy: mean_reversion|Action: SKIP|Signals: 0|Warnings: 0|Price: $657.47
+2025-09-11 11:20:35 - INFO - SPY|Action: SKIP|Buy Signals: 0|Warning Signals: 0|Price: $657.47|Trend: Neutral|Volume: Normal
+2025-09-11 11:20:36 - INFO - QQQ|Action: SKIP|Buy Signals: 0|Warning Signals: 0|Price: $584.74|Trend: Neutral|Volume: Normal

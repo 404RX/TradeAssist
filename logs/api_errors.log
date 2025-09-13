@@ -1,0 +1,20 @@
+2025-09-10 21:52:50 - ERROR - API Error: /v2/orders|429 Too Many Requests
+2025-09-10 21:57:44 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Message: position does not exist|Mode: paper
+2025-09-10 21:57:45 - ERROR - API_ERROR|GET v2/positions/QQQ|Status: 404|Message: position does not exist|Mode: paper
+2025-09-10 22:21:59 - ERROR - API_ERROR|POST /v2/orders|Status: 401|Mode: paper|Message: Invalid API key PK***REDACTED*** provided|account_id: ***REDACTED_UUID***
+2025-09-10 22:26:17 - ERROR - API_ERROR|GET v2/positions/FAKESYM|Status: 404|Mode: paper|Message: symbol not found: FAKESYM|attempts: 1|error_type: FINAL
+2025-09-10 22:26:55 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-10 22:26:55 - ERROR - API_ERROR|GET v2/positions/FAKESYM|Status: 404|Mode: paper|Message: symbol not found: FAKESYM|attempts: 1|error_type: FINAL
+2025-09-10 22:27:05 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-10 23:02:13 - ERROR - API Error: /v2/orders|429 Too Many Requests
+2025-09-11 11:19:48 - ERROR - API_ERROR|GET v2/positions/JPM|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:50 - ERROR - API_ERROR|GET v2/positions/PG|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:51 - ERROR - API_ERROR|GET v2/positions/BRK.B|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:51 - ERROR - API_ERROR|GET v2/positions/KO|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:52 - ERROR - API_ERROR|GET v2/positions/PEP|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:54 - ERROR - API_ERROR|GET v2/positions/JNJ|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:19:54 - ERROR - API_ERROR|GET v2/positions/WMT|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:20:06 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:20:07 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:20:35 - ERROR - API_ERROR|GET v2/positions/SPY|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL
+2025-09-11 11:20:36 - ERROR - API_ERROR|GET v2/positions/QQQ|Status: 404|Mode: paper|Message: position does not exist|attempts: 1|error_type: FINAL

@@ -27,6 +27,9 @@ class EnhancedBasicTrader:
         self.stop_loss_pct = 0.05   # 5% stop loss
         self.take_profit_pct = 0.15  # 15% take profit
         self.min_cash_reserve = 0.2  # Keep 20% cash
+        self.max_open_positions = 8
+        self.max_daily_loss_pct = 0.03
+        self.start_of_day_equity: Optional[float] = None
         
     def get_account_summary(self) -> Dict:
         """Get detailed account summary"""
@@ -228,6 +231,13 @@ class EnhancedBasicTrader:
         
         current_price = analysis['current_price']
         
+        # Enforce max open positions
+        try:
+            if len(self.client.get_positions()) >= self.max_open_positions:
+                return {"status": "skipped", "reason": "Max open positions reached"}
+        except Exception:
+            pass
+
         # Calculate position size
         shares = self.calculate_position_size(symbol, current_price)
         
@@ -235,42 +245,20 @@ class EnhancedBasicTrader:
             return {"status": "error", "message": "Insufficient funds for minimum position"}
         
         try:
-            # Place the order
-            order = self.client.buy_market(symbol, str(shares))
-            
-            # Set up stop loss and take profit orders
-            stop_loss_price = current_price * (1 - self.stop_loss_pct)
-            take_profit_price = current_price * (1 + self.take_profit_pct)
-            
-            # Place stop loss order
-            try:
-                stop_order = self.client.place_order(
-                    symbol=symbol,
-                    qty=str(shares),
-                    side=OrderSide.SELL,
-                    order_type=OrderType.STOP,
-                    time_in_force=TimeInForce.GTC,
-                    stop_price=f"{stop_loss_price:.2f}"
-                )
-                logger.info(f"Stop loss set at ${stop_loss_price:.2f}")
-            except Exception as e:
-                logger.warning(f"Failed to set stop loss: {e}")
-                stop_order = None
-            
-            # Place take profit order
-            try:
-                profit_order = self.client.place_order(
-                    symbol=symbol,
-                    qty=str(shares),
-                    side=OrderSide.SELL,
-                    order_type=OrderType.LIMIT,
-                    time_in_force=TimeInForce.GTC,
-                    limit_price=f"{take_profit_price:.2f}"
-                )
-                logger.info(f"Take profit set at ${take_profit_price:.2f}")
-            except Exception as e:
-                logger.warning(f"Failed to set take profit: {e}")
-                profit_order = None
+            # Place a bracket order
+            stop_loss_price = f"{current_price * (1 - self.stop_loss_pct):.2f}"
+            take_profit_price = f"{current_price * (1 + self.take_profit_pct):.2f}"
+            order = self.client.place_bracket_order(
+                symbol=symbol,
+                qty=str(shares),
+                side=OrderSide.BUY,
+                time_in_force=TimeInForce.GTC,
+                entry_type=OrderType.MARKET,
+                take_profit_limit_price=take_profit_price,
+                stop_loss_stop_price=stop_loss_price,
+            )
+            stop_order = {"stop_price": stop_loss_price}
+            profit_order = {"limit_price": take_profit_price}
             
             return {
                 "status": "success",
@@ -326,6 +314,27 @@ class EnhancedBasicTrader:
             logger.info("Market is closed")
             return
         
+        # Reset start of day equity when day changes
+        today = datetime.datetime.now().date()
+        if self.start_of_day_equity is None:
+            try:
+                acct = self.client.get_account()
+                self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+            except Exception:
+                self.start_of_day_equity = None
+
+        # Daily loss circuit breaker
+        try:
+            acct = self.client.get_account()
+            current_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+            if self.start_of_day_equity and self.start_of_day_equity > 0:
+                loss_pct = (self.start_of_day_equity - current_equity) / self.start_of_day_equity
+                if loss_pct >= self.max_daily_loss_pct:
+                    logger.warning(f"Daily loss circuit breaker triggered: {loss_pct:.2%} >= {self.max_daily_loss_pct:.2%}")
+                    return
+        except Exception:
+            pass
+
         # Get account summary
         summary = self.get_account_summary()
         logger.info(f"Account Summary:")
@@ -357,7 +366,12 @@ class EnhancedBasicTrader:
         for opp in opportunities:
             if executed >= max_new_positions:
                 break
-                
+            try:
+                if len(self.client.get_positions()) >= self.max_open_positions:
+                    break
+            except Exception:
+                pass
+
             if opp["action"] == "buy":
                 logger.info(f"Executing buy for {opp['symbol']}...")
                 result = self.execute_smart_buy(opp['symbol'])

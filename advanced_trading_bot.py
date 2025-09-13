@@ -14,16 +14,11 @@ import json
 import time
 from typing import Dict, List, Optional, Tuple
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('trading_bot.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("TradingBot")
+# Centralized logging setup via TradingLoggers
+from logging_config import trading_loggers
+
+# Use the centralized 'trading_bot' logger (writes to logs/trading_bot.log)
+logger = trading_loggers.get_logger('trading_bot')
 
 class AdvancedTradingBot:
     """
@@ -48,6 +43,7 @@ class AdvancedTradingBot:
         self.daily_trades = 0
         self.daily_pnl = 0.0
         self.last_trade_date = None
+        self.start_of_day_equity: Optional[float] = None
         self.positions_tracking = {}
         
         logger.info(f"Initialized AdvancedTradingBot:")
@@ -399,6 +395,13 @@ class AdvancedTradingBot:
         # Check daily limits
         if self.daily_trades >= self.risk_config.max_daily_trades:
             return {"status": "skipped", "reason": "Daily trade limit reached"}
+        # Enforce max open positions
+        try:
+            open_positions = self.client.get_positions()
+            if len(open_positions) >= self.risk_config.max_open_positions:
+                return {"status": "skipped", "reason": "Max open positions reached"}
+        except Exception:
+            pass
         
         market_data = evaluation['market_data']
         current_price = market_data['current_price']
@@ -410,40 +413,20 @@ class AdvancedTradingBot:
             return {"status": "skipped", "reason": "Insufficient funds or position size too small"}
         
         try:
-            # Place market buy order
-            order = self.client.buy_market(symbol, str(shares))
-            
-            # Set up risk management orders
-            stop_loss_price = current_price * (1 - self.risk_config.stop_loss_pct)
-            take_profit_price = current_price * (1 + self.risk_config.take_profit_pct)
-            
-            # Place stop loss
-            try:
-                stop_order = self.client.place_order(
-                    symbol=symbol,
-                    qty=str(shares),
-                    side=OrderSide.SELL,
-                    order_type=OrderType.STOP,
-                    time_in_force=TimeInForce.GTC,
-                    stop_price=f"{stop_loss_price:.2f}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to set stop loss for {symbol}: {e}")
-                stop_order = None
-            
-            # Place take profit
-            try:
-                profit_order = self.client.place_order(
-                    symbol=symbol,
-                    qty=str(shares),
-                    side=OrderSide.SELL,
-                    order_type=OrderType.LIMIT,
-                    time_in_force=TimeInForce.GTC,
-                    limit_price=f"{take_profit_price:.2f}"
-                )
-            except Exception as e:
-                logger.warning(f"Failed to set take profit for {symbol}: {e}")
-                profit_order = None
+            # Place a bracket order to atomically attach SL/TP
+            stop_loss_price = f"{current_price * (1 - self.risk_config.stop_loss_pct):.2f}"
+            take_profit_price = f"{current_price * (1 + self.risk_config.take_profit_pct):.2f}"
+            order = self.client.place_bracket_order(
+                symbol=symbol,
+                qty=str(shares),
+                side=OrderSide.BUY,
+                time_in_force=TimeInForce.GTC,
+                entry_type=OrderType.MARKET,
+                take_profit_limit_price=take_profit_price,
+                stop_loss_stop_price=stop_loss_price,
+            )
+            stop_order = {"stop_price": stop_loss_price}
+            profit_order = {"limit_price": take_profit_price}
             
             # Track the trade
             self.daily_trades += 1
@@ -485,7 +468,24 @@ class AdvancedTradingBot:
         if self.last_trade_date != today:
             self.daily_trades = 0
             self.last_trade_date = today
-        
+            try:
+                acct = self.client.get_account()
+                self.start_of_day_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+            except Exception:
+                self.start_of_day_equity = None
+
+        # Daily loss circuit breaker
+        try:
+            acct = self.client.get_account()
+            current_equity = float(acct.get('equity', acct.get('portfolio_value', 0.0)))
+            if self.start_of_day_equity and self.start_of_day_equity > 0:
+                loss_pct = (self.start_of_day_equity - current_equity) / self.start_of_day_equity
+                if loss_pct >= self.risk_config.max_daily_loss_pct:
+                    logger.warning(f"Daily loss circuit breaker triggered: {loss_pct:.2%} >= {self.risk_config.max_daily_loss_pct:.2%}")
+                    return []
+        except Exception:
+            pass
+
         opportunities = []
         executed_trades = []
         
@@ -505,11 +505,17 @@ class AdvancedTradingBot:
         
         logger.info(f"Found {len(opportunities)} trading opportunities")
         
-        # Execute top opportunities
+        # Execute top opportunities, respecting max_open_positions
         for opp in opportunities[:3]:  # Limit to top 3
             if self.daily_trades >= self.risk_config.max_daily_trades:
                 break
-                
+            try:
+                open_positions = self.client.get_positions()
+                if len(open_positions) >= self.risk_config.max_open_positions:
+                    break
+            except Exception:
+                pass
+
             result = self.execute_trade(opp['symbol'], opp)
             if result['status'] == 'success':
                 executed_trades.append(result)

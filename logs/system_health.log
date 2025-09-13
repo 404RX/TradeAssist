@@ -1,0 +1,10 @@
+2025-09-10 21:52:50 - INFO - System Status: OK|Memory: 85MB|API Calls: 45/200
+2025-09-10 21:58:08 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 13
+2025-09-10 22:24:10 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 11
+2025-09-10 23:02:13 - INFO - System Status: OK|Memory: 85MB|API Calls: 45/200
+2025-09-10 23:11:50 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 11
+2025-09-10 23:12:09 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 11
+2025-09-11 11:17:39 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 11
+2025-09-11 11:19:47 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: mean_reversion|Risk Level: conservative|Watchlist Size: 9
+2025-09-11 11:20:05 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: momentum|Risk Level: moderate|Watchlist Size: 11
+2025-09-11 11:20:06 - INFO - BOT_INITIALIZED|Mode: paper|Strategy: mean_reversion|Risk Level: moderate|Watchlist Size: 9
